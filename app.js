@@ -50,10 +50,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.keys(tabs).forEach(tabId => {
         const el = document.getElementById(tabId);
         if (el) {
-            el.onclick = (e) => {
+el.onclick = (e) => {
                 e.preventDefault();
-                Object.values(tabs).forEach(s => s.style.display = 'none');
-                tabs[tabId].style.display = 'block';
+                // скрываем только те секции, которые реально нашлись
+                [marketSection, giftsSection, profileSection].forEach(s => {
+                    if (s) s.style.display = 'none';
+                });
+                
+                // показываем текущую
+                if (tabs[tabId]) tabs[tabId].style.display = 'block';
+
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 el.classList.add('active');
             };
@@ -92,3 +98,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadData();
 });
+
